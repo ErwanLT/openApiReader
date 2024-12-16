@@ -9,10 +9,23 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.*;
 
+/**
+ * Classe utilitaire pour lire et analyser une spécification OpenAPI.
+ * Cette classe permet de regrouper les chemins (éléments "paths") de la spécification à partir d'une URL,
+ * en extrayant les informations utiles comme les méthodes HTTP, descriptions, et rôles de sécurité.
+ */
 public class OpenApiReader {
 
+    /**
+     * Logger pour enregistrer les informations et les erreurs.
+     */
     private static final Logger LOGGER = LoggerFactory.getLogger(OpenApiReader.class);
 
+    /**
+     * Point d'entrée principal de l'application.
+     *
+     * @param args arguments de la ligne de commande. Le premier argument doit être l'URL de la spécification OpenAPI.
+     */
     public static void main(String[] args) {
         if (args.length != 1) {
             LOGGER.error("Usage: java OpenApiReader <URL>");
@@ -29,10 +42,22 @@ public class OpenApiReader {
         }
     }
 
+    /**
+     * Récupère la spécification OpenAPI à partir d'une URL donnée.
+     *
+     * @param url URL de la spécification OpenAPI.
+     * @return La spécification OpenAPI sous forme de JSON.
+     */
     private static String getOpenApiSpec(String url) {
         return new RestTemplate().getForObject(url, String.class);
     }
 
+    /**
+     * Analyse et regroupe les chemins de la spécification OpenAPI.
+     *
+     * @param openApiJson Chaîne JSON contenant la spécification OpenAPI.
+     * @throws JsonProcessingException Si une erreur survient lors du traitement JSON.
+     */
     private static void extractApi(String openApiJson) throws JsonProcessingException {
         // ObjectMapper pour la lecture JSON
         ObjectMapper objectMapper = new ObjectMapper();
@@ -41,7 +66,7 @@ public class OpenApiReader {
         // Lire les chemins (paths)
         JsonNode pathsNode = rootNode.get("paths");
 
-        if(pathsNode != null) {
+        if (pathsNode != null) {
             // Regrouper les chemins par racine
             Map<String, List<String>> groupedPaths = new TreeMap<>(groupPathsByRoot(pathsNode));
             // Afficher les APIs regroupées
@@ -55,8 +80,13 @@ public class OpenApiReader {
         }
     }
 
-    private static Map<String,? extends List<String>> groupPathsByRoot(JsonNode pathsNode) {
-        // Créer un dictionnaire pour les chemins d'API indexés par leur racine
+    /**
+     * Regroupe les chemins de l'API par racine.
+     *
+     * @param pathsNode Noeud JSON contenant les chemins de la spécification OpenAPI.
+     * @return Une map regroupant les chemins par racine avec leurs détails.
+     */
+    private static Map<String, ? extends List<String>> groupPathsByRoot(JsonNode pathsNode) {
         Map<String, List<String>> groupedPaths = new HashMap<>();
         // Itère sur les chemins
         Iterator<Map.Entry<String, JsonNode>> pathIterator = pathsNode.fields();
@@ -69,7 +99,7 @@ public class OpenApiReader {
             var name = tags.get(0).asText();
 
             // Détermine si e chemin doit être exclu
-            if(shouldExcludePath(path)) {
+            if (shouldExcludePath(path)) {
                 // Ignore le chemin
                 continue;
             }
@@ -90,7 +120,7 @@ public class OpenApiReader {
                 List<String> roles = new ArrayList<>();
                 if (methodDetails.get("summary") != null) {
                     description = methodDetails.get("summary").asText();
-                } else if(methodDetails.get("operationId") != null) {
+                } else if (methodDetails.get("operationId") != null) {
                     description = methodDetails.get("operationId").asText();
                 } else {
                     description = "Pas de nom";
@@ -109,6 +139,12 @@ public class OpenApiReader {
         return groupedPaths;
     }
 
+    /**
+     * Vérifie si un chemin doit être exclu de l'analyse.
+     *
+     * @param path Le chemin à vérifier.
+     * @return {@code true} si le chemin doit être exclu, {@code false} sinon.
+     */
     private static boolean shouldExcludePath(String path) {
         // Chemin à exclure
         List<String> excludedPaths = List.of("test");
