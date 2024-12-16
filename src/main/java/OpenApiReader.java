@@ -21,6 +21,12 @@ public class OpenApiReader {
      */
     private static final Logger LOGGER = LoggerFactory.getLogger(OpenApiReader.class);
 
+    private static RestTemplate restTemplate = new RestTemplate();
+
+    public OpenApiReader(RestTemplate restTemplate) {
+        OpenApiReader.restTemplate = restTemplate;
+    }
+
     /**
      * Point d'entrée principal de l'application.
      *
@@ -48,8 +54,8 @@ public class OpenApiReader {
      * @param url URL de la spécification OpenAPI.
      * @return La spécification OpenAPI sous forme de JSON.
      */
-    private static String getOpenApiSpec(String url) {
-        return new RestTemplate().getForObject(url, String.class);
+    static String getOpenApiSpec(String url) {
+        return restTemplate.getForObject(url, String.class);
     }
 
     /**
@@ -58,7 +64,7 @@ public class OpenApiReader {
      * @param openApiJson Chaîne JSON contenant la spécification OpenAPI.
      * @throws JsonProcessingException Si une erreur survient lors du traitement JSON.
      */
-    private static void extractApi(String openApiJson) throws JsonProcessingException {
+    static void extractApi(String openApiJson) throws JsonProcessingException {
         // ObjectMapper pour la lecture JSON
         ObjectMapper objectMapper = new ObjectMapper();
         // Lire la racine du document
@@ -145,7 +151,7 @@ public class OpenApiReader {
      * @param path Le chemin à vérifier.
      * @return {@code true} si le chemin doit être exclu, {@code false} sinon.
      */
-    private static boolean shouldExcludePath(String path) {
+    static boolean shouldExcludePath(String path) {
         // Chemin à exclure
         List<String> excludedPaths = List.of("test");
         return excludedPaths.stream().anyMatch(path::startsWith);
