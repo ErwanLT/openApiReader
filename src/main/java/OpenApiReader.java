@@ -69,16 +69,20 @@ public class OpenApiReader {
         ObjectMapper objectMapper = new ObjectMapper();
         // Lire la racine du document
         JsonNode rootNode = objectMapper.readTree(openApiJson);
+        // Extraction du titre
+        var title = rootNode.get("info").get("title").asText();
+        
         // Lire les chemins (paths)
         JsonNode pathsNode = rootNode.get("paths");
 
         if (pathsNode != null) {
+            LOGGER.info("==Matrice des habilitations {}==", title);
             // Regrouper les chemins par racine
             Map<String, List<String>> groupedPaths = new TreeMap<>(groupPathsByRoot(pathsNode));
             // Afficher les APIs regroupées
             groupedPaths.forEach((apiRoot, endpoints) -> {
                 // Afficher la racine de l'API
-                LOGGER.info("=={}==", apiRoot);
+                LOGGER.info("==={}===", apiRoot);
                 endpoints.forEach(LOGGER::info);
             });
         } else {
@@ -137,7 +141,7 @@ public class OpenApiReader {
                         roles.add(security.get(i).asText());
                     }
                 }
-                String endpoint = String.format("  - %s %s : %s \n\t Roles : %s", httpMethod, path, description, String.join(",", roles));
+                String endpoint = String.format("  - '''%s''' %s : %s \n\t Roles : '''%s'''", httpMethod, path, description, String.join(",", roles));
                 endpoints.add(endpoint);
             }
             Collections.sort(endpoints);
