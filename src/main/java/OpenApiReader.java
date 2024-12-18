@@ -127,21 +127,31 @@ public class OpenApiReader {
                 // Récupération des détails de la méthode
                 JsonNode methodDetails = methodEntry.getValue();
                 String description;
-                List<String> roles = new ArrayList<>();
+                List<String> rolesUser = new ArrayList<>();
+                List<String> rolesApp = new ArrayList<>();
                 if (methodDetails.get("summary") != null) {
                     description = methodDetails.get("summary").asText();
-                } else if (methodDetails.get("operationId") != null) {
-                    description = methodDetails.get("operationId").asText();
                 } else {
-                    description = "Pas de nom";
+                    if (methodDetails.get("operationId") != null)
+                        description = methodDetails.get("operationId").asText();
+                    else description = "Pas de nom";
                 }
                 if(methodDetails.get("security") != null) {
-                    ArrayNode security = (ArrayNode) methodDetails.get("security").get(0).get("USER");
-                    for (int i = 0; i < security.size(); i++) {
-                        roles.add(security.get(i).asText());
+                    ArrayNode securityUser = (ArrayNode) methodDetails.get("security").get(0).get("USER");
+                    ArrayNode securityApplication = (ArrayNode) methodDetails.get("security").get(0).get("APPLICATION");
+                    if(securityUser != null) {
+                        for(int i =0; i< securityUser.size(); i++) {
+                            rolesUser.add(securityUser.get(i).asText());
+                        }
+                    }
+                    if(securityApplication != null) {
+                        for(int i =0; i< securityApplication.size(); i++) {
+                            rolesApp.add(securityApplication.get(i).asText());
+                        }
                     }
                 }
-                String endpoint = String.format("  - '''%s''' %s : %s \n\t Roles : '''%s'''", httpMethod, path, description, String.join(",", roles));
+                // Crée la ligne avec la méthode, le chemin, et la description
+                String endpoint = String.format("  - '''%s''' %s : %s %n\t Roles : '''%s'''%n\t Applications : '''%s'''", httpMethod, path, description, String.join(", ", rolesUser), String.join(", ", rolesApp));
                 endpoints.add(endpoint);
             }
             Collections.sort(endpoints);
