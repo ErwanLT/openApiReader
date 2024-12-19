@@ -29,6 +29,10 @@ Exécutez l'application avec la commande suivante :
 java -jar target/OpenApiReader.jar <URL> [format]
 ```
 
+Les formats disponibles sont :
+- wiki
+- markdown
+
 ### Exemple
 ```bash
 java -jar target/OpenApiReader.jar https://petstore.swagger.io/v2/swagger.json wiki
