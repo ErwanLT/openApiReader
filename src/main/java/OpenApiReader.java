@@ -3,11 +3,21 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import exception.OpenApiReaderException;
+import exception.UnsupportedFormatException;
+import formater.Formatter;
+import formater.FormatterFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+
 
 /**
  * Classe utilitaire pour lire et analyser une spécification OpenAPI.
@@ -16,11 +26,7 @@ import java.util.*;
  */
 public class OpenApiReader {
 
-    /**
-     * Logger pour enregistrer les informations et les erreurs.
-     */
     private static final Logger LOGGER = LoggerFactory.getLogger(OpenApiReader.class);
-
     private static RestTemplate restTemplate = new RestTemplate();
 
     public OpenApiReader(RestTemplate restTemplate) {
@@ -33,16 +39,20 @@ public class OpenApiReader {
      * @param args arguments de la ligne de commande. Le premier argument doit être l'URL de la spécification OpenAPI.
      */
     public static void main(String[] args) {
-        if (args.length != 1) {
-            LOGGER.error("Usage: java OpenApiReader <URL>");
+        if (args.length < 1 || args.length > 2) {
+            LOGGER.error("Usage: java OpenApiReader <URL> [format]");
             return;
         }
 
         String url = args[0];
+        String format = args.length == 2 ? args[1] : "wiki";
 
         try {
             String jsonResponse = getOpenApiSpec(url);
-            extractApi(jsonResponse);
+            Formatter formatter = FormatterFactory.getFormatter(format);
+            extractApi(jsonResponse, formatter);
+        } catch (UnsupportedFormatException e) {
+            LOGGER.error("Format non supporté : {}", e.getMessage());
         } catch (JsonProcessingException e) {
             throw new OpenApiReaderException(e.getMessage());
         }
@@ -62,28 +72,21 @@ public class OpenApiReader {
      * Analyse et regroupe les chemins de la spécification OpenAPI.
      *
      * @param openApiJson Chaîne JSON contenant la spécification OpenAPI.
+     * @param formatter Formatter pour formater les détails des endpoints.
      * @throws JsonProcessingException Si une erreur survient lors du traitement JSON.
      */
-    static void extractApi(String openApiJson) throws JsonProcessingException {
-        // ObjectMapper pour la lecture JSON
+    static void extractApi(String openApiJson, Formatter formatter) throws JsonProcessingException {
         ObjectMapper objectMapper = new ObjectMapper();
-        // Lire la racine du document
         JsonNode rootNode = objectMapper.readTree(openApiJson);
-        // Extraction du titre
         var title = rootNode.get("info").get("title").asText();
-        
-        // Lire les chemins (paths)
-        JsonNode pathsNode = rootNode.get("paths");
 
+        JsonNode pathsNode = rootNode.get("paths");
         if (pathsNode != null) {
-            LOGGER.info("==Matrice des habilitations {}==", title);
-            // Regrouper les chemins par racine
-            Map<String, List<String>> groupedPaths = new TreeMap<>(groupPathsByRoot(pathsNode));
-            // Afficher les APIs regroupées
+            LOGGER.info("== Matrice des habilitations {} ==", title);
+            Map<String, List<String>> groupedPaths = new TreeMap<>(groupPathsByRoot(pathsNode, formatter));
             groupedPaths.forEach((apiRoot, endpoints) -> {
-                // Afficher la racine de l'API
-                LOGGER.info("==={}===", apiRoot);
-                endpoints.forEach(LOGGER::info);
+                LOGGER.info(formatter.formatHeader(apiRoot));
+                endpoints.forEach(endpoint -> LOGGER.info(formatter.formatEndpoint(endpoint)));
             });
         } else {
             LOGGER.error("Aucune API définie dans le fichier OpenAPI.");
@@ -94,69 +97,61 @@ public class OpenApiReader {
      * Regroupe les chemins de l'API par racine.
      *
      * @param pathsNode Noeud JSON contenant les chemins de la spécification OpenAPI.
+     * @param formatter Formatter pour formater les détails des endpoints.
      * @return Une map regroupant les chemins par racine avec leurs détails.
      */
-    private static Map<String, ? extends List<String>> groupPathsByRoot(JsonNode pathsNode) {
+    static Map<String, List<String>> groupPathsByRoot(JsonNode pathsNode, Formatter formatter) {
         Map<String, List<String>> groupedPaths = new HashMap<>();
-        // Itère sur les chemins
         Iterator<Map.Entry<String, JsonNode>> pathIterator = pathsNode.fields();
         while (pathIterator.hasNext()) {
-            // Récupère le chemin actuel
             Map.Entry<String, JsonNode> pathEntry = pathIterator.next();
             String path = pathEntry.getKey();
 
             ArrayNode tags = (ArrayNode) pathEntry.getValue().fields().next().getValue().get("tags");
             var name = tags.get(0).asText();
 
-            // Détermine si e chemin doit être exclu
             if (shouldExcludePath(path)) {
-                // Ignore le chemin
                 continue;
             }
 
-            // Ajoute le chemin et ses méthodes au groupe
             JsonNode methodsNode = pathEntry.getValue();
             List<String> endpoints = groupedPaths.computeIfAbsent(name, k -> new ArrayList<>());
-            // Itère sur les méthodes pour le chemin
             Iterator<Map.Entry<String, JsonNode>> methodsIterator = methodsNode.fields();
             while (methodsIterator.hasNext()) {
-                // Récupération méthode actuelle
                 Map.Entry<String, JsonNode> methodEntry = methodsIterator.next();
                 String httpMethod = methodEntry.getKey().toUpperCase();
 
-                // Récupération des détails de la méthode
                 JsonNode methodDetails = methodEntry.getValue();
-                String description;
-                List<String> rolesUser = new ArrayList<>();
-                List<String> rolesApp = new ArrayList<>();
-                if (methodDetails.get("summary") != null) {
-                    description = methodDetails.get("summary").asText();
-                } else {
-                    if (methodDetails.get("operationId") != null)
-                        description = methodDetails.get("operationId").asText();
-                    else description = "Pas de nom";
-                }
-                if(methodDetails.get("security") != null) {
-                    ArrayNode securityUser = (ArrayNode) methodDetails.get("security").get(0).get("USER");
-                    ArrayNode securityApplication = (ArrayNode) methodDetails.get("security").get(0).get("APPLICATION");
-                    if(securityUser != null) {
-                        for(int i =0; i< securityUser.size(); i++) {
-                            rolesUser.add(securityUser.get(i).asText());
-                        }
-                    }
-                    if(securityApplication != null) {
-                        for(int i =0; i< securityApplication.size(); i++) {
-                            rolesApp.add(securityApplication.get(i).asText());
-                        }
-                    }
-                }
-                // Crée la ligne avec la méthode, le chemin, et la description
-                String endpoint = String.format("  - '''%s''' %s : %s %n\t Roles : '''%s'''%n\t Applications : '''%s'''", httpMethod, path, description, String.join(", ", rolesUser), String.join(", ", rolesApp));
-                endpoints.add(endpoint);
+                String description = methodDetails.has("summary")
+                        ? methodDetails.get("summary").asText()
+                        : methodDetails.has("operationId")
+                        ? methodDetails.get("operationId").asText()
+                        : "Pas de description";
+
+                // Extraction des rôles
+                List<String> roles = extractRoles(methodDetails);
+
+                endpoints.add(formatter.formatEndpointDetail(httpMethod, path, description, roles));
             }
             Collections.sort(endpoints);
         }
         return groupedPaths;
+    }
+
+    /**
+     * Extrait les rôles de sécurité d'une méthode.
+     * @param methodDetails Détails de la méthode.
+     * @return La liste des rôles de sécurité.
+     */
+    private static List<String> extractRoles(JsonNode methodDetails) {
+        List<String> roles = new ArrayList<>();
+        if (methodDetails.has("security")) {
+            ArrayNode security = (ArrayNode) methodDetails.get("security");
+            for (JsonNode securityRequirement : security) {
+                securityRequirement.fieldNames().forEachRemaining(roles::add);
+            }
+        }
+        return roles;
     }
 
     /**
@@ -166,7 +161,6 @@ public class OpenApiReader {
      * @return {@code true} si le chemin doit être exclu, {@code false} sinon.
      */
     static boolean shouldExcludePath(String path) {
-        // Chemin à exclure
         List<String> excludedPaths = List.of("test");
         return excludedPaths.stream().anyMatch(path::startsWith);
     }

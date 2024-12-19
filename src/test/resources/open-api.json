@@ -1,0 +1,136 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Human cloning API",
+    "description": "API for creating clone who will fight in the clones wars",
+    "contact": {
+      "name": "LE TUTOUR Erwan",
+      "url": "https://github.com/ErwanLT",
+      "email": "erwanletutour.elt@gmail.com"
+    },
+    "license": {
+      "name": "MIT Licence",
+      "url": "https://opensource.org/licenses/mit-license.php"
+    },
+    "version": "2.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080",
+      "description": "Generated server url"
+    }
+  ],
+  "paths": {
+    "/pet/findByStatus": {
+      "get": {
+        "tags": ["pet"],
+        "summary": "Find pets by status",
+        "security": [
+          {"user": []}
+        ]
+      }
+    },
+    "/store/order": {
+      "post": {
+        "tags": ["store"],
+        "summary": "Place an order",
+        "security": [
+          {"admin": []}
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Clone": {
+        "required": [
+          "codeName",
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "The generated ID when saved in database",
+            "format": "int64"
+          },
+          "brithPlace": {
+            "maxLength": 40,
+            "minLength": 3,
+            "type": "string",
+            "description": "The clone code name",
+            "example": "Kamino"
+          },
+          "codeName": {
+            "type": "string",
+            "description": "The clone code name"
+          },
+          "type": {
+            "type": "string",
+            "description": "The clone specialisation",
+            "enum": [
+              "flametrooper",
+              "medic",
+              "gunner",
+              "scoot",
+              "jetpack"
+            ]
+          },
+          "platoon": {
+            "type": "string",
+            "description": "The clone's platoon",
+            "example": "501"
+          },
+          "affilation": {
+            "maxLength": 40,
+            "minLength": 3,
+            "type": "string",
+            "description": "The clone affilation",
+            "example": "Galactic Republic"
+          }
+        }
+      },
+      "AuthRequest": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        }
+      },
+      "AuthResponse": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "accessToken": {
+            "type": "string"
+          }
+        }
+      },
+      "CloneByCategorie": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "flametrooper",
+              "medic",
+              "gunner",
+              "scoot",
+              "jetpack"
+            ]
+          },
+          "number": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      }
+    }
+  }
+}
