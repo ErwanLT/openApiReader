@@ -4,6 +4,11 @@ import java.util.List;
 
 public class WikiFormatter implements Formatter {
     @Override
+    public String fomratTitle(String title) {
+        return String.format("== Matrice des habilitations %s ==", title);
+    }
+
+    @Override
     public String formatHeader(String header) {
         return String.format("=== %s ===", header);
     }

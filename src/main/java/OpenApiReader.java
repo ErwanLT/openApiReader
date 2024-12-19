@@ -82,7 +82,7 @@ public class OpenApiReader {
 
         JsonNode pathsNode = rootNode.get("paths");
         if (pathsNode != null) {
-            LOGGER.info("== Matrice des habilitations {} ==", title);
+            LOGGER.info(formatter.fomratTitle(title));
             Map<String, List<String>> groupedPaths = new TreeMap<>(groupPathsByRoot(pathsNode, formatter));
             groupedPaths.forEach((apiRoot, endpoints) -> {
                 LOGGER.info(formatter.formatHeader(apiRoot));

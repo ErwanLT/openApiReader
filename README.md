@@ -26,22 +26,22 @@ OpenApiReader est une application Java permettant de lire, d’analyser et de re
 ## Utilisation
 Exécutez l'application avec la commande suivante :
 ```bash
-java -jar target/OpenApiReader.jar <URL>
+java -jar target/OpenApiReader.jar <URL> [format]
 ```
 
 ### Exemple
 ```bash
-java -jar target/OpenApiReader.jar https://petstore.swagger.io/v2/swagger.json
+java -jar target/OpenApiReader.jar https://petstore.swagger.io/v2/swagger.json wiki
 ```
 
 ### Sortie attendue
 L’application affiche les chemins regroupés par racine avec leurs détails :
 ```
-==pet==
-  - GET /pet/findByStatus : Find pets by status
-     Roles : user,admin
-  - POST /pet : Add a new pet to the store
-     Roles : admin
+== Matrice des habilitations Pet Store ==
+=== pet ===
+  - '''GET''' /pet/findByStatus : Find pets by status (Rôles : user)
+=== store ===
+  - '''POST''' /store/order : Place an order (Rôles : admin)
 ```
 
 ## Configuration
